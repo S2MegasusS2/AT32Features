@@ -241,10 +241,75 @@ void nvic_configuration(void)
 }
 
 //----------------------------------------------------------------------
-//-- User LCD function
+//-- User BootLoader Func
 
 
+#define BOOTLOADER
 
+//-- Boot 1 Segment : 0x0800_0000
+//-- Boot 2 Segment : 0x0807_FFFF
+#ifdef BOOTLOADER
+
+#define BOOTLOADER_FLASHMEM_ADDRESS 0x0807FFFF
+#define BPR_JUMP_FLAG 0x5AA5
+
+#define SET_MSP(dwValue) __ASM volatile ("msr msp, "#dwValue)
+
+void (*pfTarget)(void);
+
+void app_jump_to_bootloader_flashmem(void)
+{
+	uint32_t dwStkPtr, dwJumpAddr;
+	dwStkPtr = *(uint32_t *)BOOTLOADER_FLASHMEM_ADDRESS;
+	dwJumpAddr = *(uint32_t *)BOOTLOADER_FLASHMEM_ADDRESS + sizeof(uint32_t);
+
+	SET_MSP(dwStkPtr);
+	pfTarget = (void (*)(void))dwJumpAddr;
+	pfTarget();
+}
+
+void app_clear_sys_status()
+{
+	/*close all peripherals clock*/
+	CRM->apb2rst = 0xFFFF;
+	CRM->apb2rst = 0;
+	CRM->apb1rst = 0xFFFF;
+	CRM->apb1rst = 0;
+	CRM->apb1en = 0;
+	CRM->apb2en = 0;
+
+	/*close pll*/
+	/* reset sclksel, ahbdiv, apb1div, apb2div, adcdiv and clkout_sel bits */
+	CRM->cfg_bit.sclksel = 0;
+	CRM->cfg_bit.ahbdiv = 0;
+	CRM->cfg_bit.apb1div = 0;
+	CRM->cfg_bit.apb2div = 0;
+	CRM->cfg_bit.adcdiv_l = 0;
+	CRM->cfg_bit.adcdiv_h = 0;
+	CRM->cfg_bit.clkout_sel = 0;
+	CRM->ctrl_bit.hexten = 0;
+	CRM->ctrl_bit.cfden = 0;
+	CRM->ctrl_bit.pllen = 0;
+	CRM->cfg_bit.pllrcs = 0;
+	CRM->cfg_bit.pllhextdiv = 0;
+	CRM->cfg_bit.pllmult_l = 0;
+	CRM->cfg_bit.pllmult_h = 0;
+	CRM->cfg_bit.usbdiv_l = 0;
+	CRM->cfg_bit.usbdiv_h = 0;
+	CRM->cfg_bit.pllrange = 0;
+
+	/* disable all interrupts and clear pending bits  */
+	CRM->clkint_bit.lickstblfc = 0;
+	CRM->clkint_bit.lextstblfc = 0;
+	CRM->clkint_bit.hickstblfc = 0;
+	CRM->clkint_bit.hextstblfc = 0;
+	CRM->clkint_bit.pllstblfc = 0;
+	CRM->clkint_bit.cfdfc = 0;
+	/*colse systick*/
+	SysTick->CTRL = 0;
+}
+#endif
+//-- End of User func
 //===================================================================================================
 
 /**
@@ -254,6 +319,9 @@ void nvic_configuration(void)
   */
 int main(void)
 {
+
+#ifndef BOOTLOADER
+
 	//--System Config
 	nvic_priority_group_config(NVIC_PRIORITY_GROUP_4);
 	system_clock_config();
@@ -289,6 +357,10 @@ int main(void)
 	  printf("internal_temperature = %f deg C\r\n", tprt_chip);
 	  lcd_struct->lcd_write_num((int)tprt_chip, 1, 26, RED);
 	}
+
+#else
+
+#endif
 }
 
 

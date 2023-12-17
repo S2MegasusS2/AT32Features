@@ -482,7 +482,7 @@ void lcd_write_string(char *string, uint16_t row_start, uint16_t col_start, uint
 void lcd_write_num(uint16_t num, uint16_t row_start, uint16_t col_start, uint16_t color)
 {
 	printf("interger: %d", num);
-	char number_string[20];
+	char number_string[30];
 	sprintf(number_string, "%d", num);
 	uint16_t length = strlen(number_string);
 	printf("\r\nlength_str && string: %d && %s\r\n", length, number_string);
